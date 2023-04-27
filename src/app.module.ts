@@ -5,9 +5,8 @@ import { DatabaseModule } from './database';
 import { SectionsModule } from './sections';
 import { SubsectionsModule } from './subsections';
 import { TorrentsModule } from './torrents';
-import { RutrackerScrapperModule } from './rutracker-scrapper/rutracker-scrapper.module';
-import { SectionService } from './section/section.service';
-import configuration from './config/configuration';
+import { RutrackerScrapperModule } from './rutracker-scrapper';
+import { configuration } from './config';
 
 @Module({
   imports: [
@@ -21,6 +20,5 @@ import configuration from './config/configuration';
     TorrentsModule,
     RutrackerScrapperModule,
   ],
-  providers: [SectionService],
 })
 export class AppModule {}
