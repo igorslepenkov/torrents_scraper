@@ -4,7 +4,6 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database';
 import { SectionsModule } from './sections';
 import { SubsectionsModule } from './subsections';
-import { TorrentsModule } from './torrents';
 import { RutrackerScrapperModule } from './rutracker-scrapper';
 import { configuration } from './config';
 
@@ -17,7 +16,6 @@ import { configuration } from './config';
     DatabaseModule,
     SectionsModule,
     SubsectionsModule,
-    TorrentsModule,
     RutrackerScrapperModule,
   ],
 })
