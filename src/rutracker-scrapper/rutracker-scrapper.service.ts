@@ -25,6 +25,7 @@ export class RutrackerScrapperService {
       '--proxy-bypass-list=*',
       '--disable-extensions',
       '--disable-gpu',
+      '--no-sandbox',
     ],
   };
   RUTRACKER_URL: string = this.configService.get<string>('rutrackerUrl');
