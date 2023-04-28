@@ -14,7 +14,7 @@ export class SubsectionsController {
     return await this.subsectionsService.findAll();
   }
 
-  @Get(':subsection_id')
+  @Get(':subsection_id/torrents')
   async getTorrentsOfSubsection(
     @Param('subsection_id') subsectionId: string,
     @Query('max') max: number,

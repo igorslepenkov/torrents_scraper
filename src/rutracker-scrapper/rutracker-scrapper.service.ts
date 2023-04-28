@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Document } from 'mongoose';
@@ -16,10 +16,10 @@ import { ITorrent } from 'src/types';
 
 @Injectable()
 export class RutrackerScrapperService {
-  MAX_BROWSERS = 5;
+  MAX_BROWSERS = this.configService.get<number>('maxBrowsersCount');
   MAX_TIMEOUT = 5000;
   BROWSER_CONFIG: PuppeteerLaunchOptions = {
-    headless: false,
+    headless: true,
     args: [
       "--proxy-server='direct://'",
       '--proxy-bypass-list=*',
@@ -299,6 +299,8 @@ export class RutrackerScrapperService {
 
       return await this.sectionModel.find();
     } catch (err) {
+      console.log(err);
+
       throw new HttpException('Error during getting sections tree', 500);
     }
   }
@@ -306,11 +308,14 @@ export class RutrackerScrapperService {
   public async getSubsectionsTorrents(subsectionId: string, max: number) {
     try {
       const subsection = await this.subsectionModel.findById(subsectionId);
+
+      if (!subsection) throw new NotFoundException();
+
       const torrentsLinks = await this.getTorrentsLinks(subsection.link, max);
 
       const cluster = await Cluster.launch({
         concurrency: Cluster.CONCURRENCY_BROWSER,
-        maxConcurrency: 6,
+        maxConcurrency: this.MAX_BROWSERS,
         puppeteerOptions: this.BROWSER_CONFIG,
         retryLimit: 1,
       });
@@ -342,6 +347,10 @@ export class RutrackerScrapperService {
       return result;
     } catch (err) {
       console.log(err);
+      if (err.status === 404) {
+        throw new NotFoundException('Subsection not found');
+      }
+
       throw new HttpException('Error during getting torrents', 500);
     }
   }

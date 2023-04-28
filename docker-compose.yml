@@ -1,0 +1,31 @@
+version: '3.1'
+
+services:
+  rutracker-scrapper-server:
+    container_name: rutracker-scrapper-server
+    env_file:
+      - ./.env
+    environment:
+      - DATABASE_URL=mongodb://rutracker-scrapper-db:27017/torrents
+    build: ./
+    ports:
+      - ${SERVER_PORT}:${SERVER_PORT}
+    networks:
+      - rutracker-scrapper
+    depends_on:
+      - rutracker-scrapper-db
+    restart: always
+
+  rutracker-scrapper-db:
+    container_name: rutracker-scrapper-db
+    image: mongo
+    env_file:
+      - ./.env
+    expose:
+      - 27017
+    restart: always
+    networks:
+      - rutracker-scrapper
+
+networks:
+  rutracker-scrapper:
