@@ -2,9 +2,9 @@
 
 <br />
 <div align="center">
-  <h2 align="center">Rutracker scrapper</h3>
+  <h2 align="center">Rutracker scraper</h3>
 
-  <p align="center">Simple pet web scrapper for rutracker torrents</p>
+  <p align="center">Simple pet web scraper for rutracker torrents</p>
 </div>
 
 ## Installation:
