@@ -166,7 +166,9 @@ export class RutrackerScrapperService {
       );
     }
 
-    return torrentLinks;
+    return torrentLinks.length > max
+      ? torrentLinks.slice(0, max)
+      : torrentLinks;
   }
 
   private async getTorrentInfoFromLink(
@@ -345,7 +347,7 @@ export class RutrackerScrapperService {
       await cluster.idle();
       await cluster.close();
 
-      return result;
+      return { result, count: result.length };
     } catch (err) {
       console.log(err);
       if (err.status === 404) {

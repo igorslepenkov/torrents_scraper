@@ -17,7 +17,7 @@ export class SubsectionsController {
   @Get(':subsection_id/torrents')
   async getTorrentsOfSubsection(
     @Param('subsection_id') subsectionId: string,
-    @Query('max') max: number,
+    @Query('max') max: number = 50,
   ) {
     return await this.rutrackerScrapperService.getSubsectionsTorrents(
       subsectionId,

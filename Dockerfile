@@ -1,20 +1,13 @@
-FROM node:20-alpine
+FROM node:latest
 
-RUN apk add --no-cache \
-      chromium \
-      nss \
-      freetype \
-      harfbuzz \
-      ca-certificates \
-      ttf-freefont 
-
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+RUN apt-get update -y && apt-get upgrade -y
+RUN apt-get -y install chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 COPY . /app
 RUN cd /app
-
-RUN npm i
-RUN npm i -g nest
-RUN npm run build
-CMD npm run start
+RUN yarn install --prod
+RUN yarn add source-map-support
+RUN yarn global add @nestjs/cli
+CMD yarn run build && yarn run start
