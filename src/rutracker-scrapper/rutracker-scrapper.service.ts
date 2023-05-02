@@ -17,7 +17,7 @@ import { ITorrent } from 'src/types';
 @Injectable()
 export class RutrackerScrapperService {
   MAX_BROWSERS = this.configService.get<number>('maxBrowsersCount');
-  MAX_TIMEOUT = 3000;
+  MAX_TIMEOUT = 9000;
   BROWSER_CONFIG: PuppeteerLaunchOptions = {
     headless: true,
     args: [
@@ -148,6 +148,8 @@ export class RutrackerScrapperService {
   }
 
   private async getTorrentsLinks(linkToSubsectionPage: string, max: number) {
+    try {
+    } catch (err) {}
     const browser = await puppeteer.launch(this.BROWSER_CONFIG);
     const page = await browser.newPage();
     await this.navigateRutrackerPage(page, linkToSubsectionPage);
@@ -155,22 +157,26 @@ export class RutrackerScrapperService {
     let nextButtonHandler = await page.$(
       'xpath/' + '//a[@class="pg"][contains(., "След.")]',
     );
-    let nextButtonElementHref = await nextButtonHandler.evaluate(
-      (btn) => (btn as HTMLAnchorElement).href,
-    );
+
     let torrentLinks: string[] = await this.getAllTorrentLinksFromPage(page);
 
-    while (nextButtonElementHref && torrentLinks.length < max) {
-      await page.goto(nextButtonElementHref);
-      const torrentsLinksOnPage = await this.getAllTorrentLinksFromPage(page);
-      torrentLinks = [...torrentLinks, ...torrentsLinksOnPage];
-
-      nextButtonHandler = await page.$(
-        'xpath/' + '//a[@class="pg"][contains(., "След.")]',
-      );
-      nextButtonElementHref = await nextButtonHandler.evaluate(
+    if (nextButtonHandler) {
+      let nextButtonElementHref = await nextButtonHandler.evaluate(
         (btn) => (btn as HTMLAnchorElement).href,
       );
+
+      while (nextButtonElementHref && torrentLinks.length < max) {
+        await page.goto(nextButtonElementHref);
+        const torrentsLinksOnPage = await this.getAllTorrentLinksFromPage(page);
+        torrentLinks = [...torrentLinks, ...torrentsLinksOnPage];
+
+        nextButtonHandler = await page.$(
+          'xpath/' + '//a[@class="pg"][contains(., "След.")]',
+        );
+        nextButtonElementHref = await nextButtonHandler.evaluate(
+          (btn) => (btn as HTMLAnchorElement).href,
+        );
+      }
     }
 
     return torrentLinks.length > max
@@ -182,147 +188,154 @@ export class RutrackerScrapperService {
     page: Page,
     { link }: { link: string },
   ): Promise<ITorrent> {
-    await this.navigateRutrackerPage(page, link);
-
-    const titleSelector = 'a#topic-title';
-    let title = '';
     try {
-      const titleHandler = await page.waitForSelector(titleSelector, {
-        timeout: this.MAX_TIMEOUT,
-      });
-      title = await titleHandler.evaluate((title) => title.textContent);
-    } catch (err) {
-      title = 'Title not found';
-    }
+      await this.navigateRutrackerPage(page, link);
 
-    const descriptionXPath =
-      '//tbody[@class="row1"]//div[@class="post_body"]//span[contains(., "Описание")]/following-sibling::text()[1]';
-    let description = '';
-    try {
-      const descriptionHandler = await page.waitForXPath(descriptionXPath, {
-        timeout: this.MAX_TIMEOUT,
-      });
-      description = (
-        await descriptionHandler.evaluate((node) => node.textContent)
-      ).replace(/^:\s/, '');
-    } catch (err) {
-      description = 'Description not found';
-    }
-
-    const releaseDateXPath =
-      '//table[@class="attach bordered med"]/tbody/tr[@class="row1"]/td[contains(., "Зарегистрирован")]/following-sibling::td/ul/li[1]';
-    let releaseDate = '';
-    try {
-      const releaseDateHandler = await page.waitForXPath(releaseDateXPath, {
-        timeout: this.MAX_TIMEOUT,
-      });
-      releaseDate = await releaseDateHandler.evaluate(
-        (element) => element.textContent,
-      );
-    } catch (err) {
-      releaseDate = 'Release date not found';
-    }
-
-    const authorsNicknameSelector = 'p.nick.nick-author';
-    let authorsNickname = '';
-    try {
-      const authorsNicknameHandler = await page.waitForSelector(
-        authorsNicknameSelector,
-        { timeout: this.MAX_TIMEOUT },
-      );
-      authorsNickname = await authorsNicknameHandler.evaluate(
-        (element) => element.textContent,
-      );
-    } catch (err) {
-      authorsNickname = 'Гость';
-    }
-
-    const magneteLinkSelector = 'a.med.magnet-link';
-    let magneteLink = '';
-    try {
-      const magneteLinkHandler = await page.waitForSelector(
-        magneteLinkSelector,
-        {
+      const titleSelector = 'a#topic-title';
+      let title = '';
+      try {
+        const titleHandler = await page.waitForSelector(titleSelector, {
           timeout: this.MAX_TIMEOUT,
-        },
-      );
-      magneteLink = await magneteLinkHandler.evaluate(
-        (element) => element.href,
-      );
-    } catch (err) {
-      magneteLink = 'Magnete link not found';
-    }
+        });
+        title = await titleHandler.evaluate((title) => title.textContent);
+      } catch (err) {
+        title = 'Title not found';
+      }
 
-    const downloadLinkSelector = 'a.dl-stub.dl-link.dl-topic';
-    let downloadLink = '';
-    try {
-      const downloadLinkHandler = await page.waitForSelector(
-        downloadLinkSelector,
-        {
+      const descriptionXPath =
+        '//tbody[@class="row1"]//div[@class="post_body"]//span[contains(., "Описание")]/following-sibling::text()[1]';
+      let description = '';
+      try {
+        const descriptionHandler = await page.waitForXPath(descriptionXPath, {
           timeout: this.MAX_TIMEOUT,
-        },
-      );
-      downloadLink = await downloadLinkHandler.evaluate(
-        (element) => element.href,
-      );
-    } catch (err) {
-      downloadLink = 'Download link not found';
-    }
+        });
+        description = (
+          await descriptionHandler.evaluate((node) => node.textContent)
+        ).replace(/^:\s/, '');
+      } catch (err) {
+        description = 'Description not found';
+      }
 
-    const gratefulPeopleXPath =
-      '//span[contains(., "Последние поблагодарившие")]/..';
-    let gratefulPeopleList: { nickname: string; date: string }[] = [];
-    try {
-      const gratefulPeopleWrapperHandler = await page.waitForXPath(
-        gratefulPeopleXPath,
-        {
+      const releaseDateXPath =
+        '//table[@class="attach bordered med"]/tbody/tr[@class="row1"]/td[contains(., "Зарегистрирован")]/following-sibling::td/ul/li[1]';
+      let releaseDate = '';
+      try {
+        const releaseDateHandler = await page.waitForXPath(releaseDateXPath, {
           timeout: this.MAX_TIMEOUT,
-        },
-      );
+        });
+        releaseDate = await releaseDateHandler.evaluate(
+          (element) => element.textContent,
+        );
+      } catch (err) {
+        releaseDate = 'Release date not found';
+      }
 
-      (gratefulPeopleWrapperHandler as ElementHandle<HTMLSpanElement>).click();
+      const authorsNicknameSelector = 'p.nick.nick-author';
+      let authorsNickname = '';
+      try {
+        const authorsNicknameHandler = await page.waitForSelector(
+          authorsNicknameSelector,
+          { timeout: this.MAX_TIMEOUT },
+        );
+        authorsNickname = await authorsNicknameHandler.evaluate(
+          (element) => element.textContent,
+        );
+      } catch (err) {
+        authorsNickname = 'Гость';
+      }
 
-      await page.waitForSelector('div#thx-list a b i', {
-        timeout: this.MAX_TIMEOUT,
-      });
+      const magneteLinkSelector = 'a.med.magnet-link';
+      let magneteLink = '';
+      try {
+        const magneteLinkHandler = await page.waitForSelector(
+          magneteLinkSelector,
+          {
+            timeout: this.MAX_TIMEOUT,
+          },
+        );
+        magneteLink = await magneteLinkHandler.evaluate(
+          (element) => element.href,
+        );
+      } catch (err) {
+        magneteLink = 'Magnete link not found';
+      }
 
-      const gratefulPeopleListHandlers = await page.$$(
-        'xpath/' + '//div[@id="thx-list"]/a/b',
-      );
+      const downloadLinkSelector = 'a.dl-stub.dl-link.dl-topic';
+      let downloadLink = '';
+      try {
+        const downloadLinkHandler = await page.waitForSelector(
+          downloadLinkSelector,
+          {
+            timeout: this.MAX_TIMEOUT,
+          },
+        );
+        downloadLink = await downloadLinkHandler.evaluate(
+          (element) => element.href,
+        );
+      } catch (err) {
+        downloadLink = 'Download link not found';
+      }
 
-      const gratefulPeopleResultsList = await Promise.allSettled(
-        gratefulPeopleListHandlers.map(async (handler) => {
-          const nicknameHandler = await handler.$('xpath/' + 'text()');
-          const nickname = await nicknameHandler.evaluate(
-            (node) => node.textContent,
-          );
+      const gratefulPeopleXPath =
+        '//span[contains(., "Последние поблагодарившие")]/..';
+      let gratefulPeopleList: { nickname: string; date: string }[] = [];
+      try {
+        const gratefulPeopleWrapperHandler = await page.waitForXPath(
+          gratefulPeopleXPath,
+          {
+            timeout: this.MAX_TIMEOUT,
+          },
+        );
 
-          const dateHandler = await handler.$('xpath/' + 'i');
-          const date = await dateHandler.evaluate((element) =>
-            element.textContent.replace(/^\(|\)$/g, ''),
-          );
-          return { nickname, date };
-        }),
-      );
+        (
+          gratefulPeopleWrapperHandler as ElementHandle<HTMLSpanElement>
+        ).click();
 
-      gratefulPeopleResultsList.forEach((result) =>
-        result.status === 'fulfilled'
-          ? gratefulPeopleList.push(result.value)
-          : false,
-      );
-    } catch (err) {}
+        await page.waitForSelector('div#thx-list a b i', {
+          timeout: this.MAX_TIMEOUT,
+        });
 
-    await page.close();
+        const gratefulPeopleListHandlers = await page.$$(
+          'xpath/' + '//div[@id="thx-list"]/a/b',
+        );
 
-    return {
-      title,
-      description,
-      releaseDate,
-      authorsNickname,
-      magneteLink,
-      downloadLink,
-      gratefulPeopleList,
-    };
+        const gratefulPeopleResultsList = await Promise.allSettled(
+          gratefulPeopleListHandlers.map(async (handler) => {
+            const nicknameHandler = await handler.$('xpath/' + 'text()');
+            const nickname = await nicknameHandler.evaluate(
+              (node) => node.textContent,
+            );
+
+            const dateHandler = await handler.$('xpath/' + 'i');
+            const date = await dateHandler.evaluate((element) =>
+              element.textContent.replace(/^\(|\)$/g, ''),
+            );
+            return { nickname, date };
+          }),
+        );
+
+        gratefulPeopleResultsList.forEach((result) =>
+          result.status === 'fulfilled'
+            ? gratefulPeopleList.push(result.value)
+            : false,
+        );
+      } catch (err) {}
+
+      await page.close();
+
+      return {
+        title,
+        description,
+        releaseDate,
+        authorsNickname,
+        magneteLink,
+        downloadLink,
+        gratefulPeopleList,
+      };
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
   }
 
   public async getRutrackerSectionsTree(): Promise<
